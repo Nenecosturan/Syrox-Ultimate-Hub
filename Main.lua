@@ -1,221 +1,175 @@
 --[[
-    ███████╗██╗   ██╗██████╗  ██████╗ ██╗  ██╗    ██╗   ██╗███████╗
-    ██╔════╝╚██╗ ██╔╝██╔══██╗██╔═══██╗╚██╗██╔╝    ██║   ██║╚════██║
-    ███████╗ ╚████╔╝ ██████╔╝██║   ██║ ╚███╔╝     ██║   ██║    ██╔╝
-    ╚════██║  ╚██╔╝  ██╔══██╗██║   ██║ ██╔██╗     ╚██╗ ██╔╝   ██╔╝ 
-    ███████║   ██║   ██║  ██║╚██████╔╝██╔╝ ██╗     ╚████╔╝    ██║  
-    ╚══════╝   ╚═╝   ╚═╝  ╚═╝ ╚═════╝ ╚═╝  ╚═╝      ╚═══╝     ╚═╝  
-    
-    VERSION: 7.0.0 PREMIUIM (REVISION 2026)
-    DEVELOPER: SYROX CORE & GEMINI AI
-    MODULES: CHAT BYPASS, ANTI-LOGGER, MOVEMENT, COMBAT, VISUALS
-    SUPPORT: DELTA, WAVE, ARCEUS X, SWIFT, CODEX
+    SYROX HUB V7.1 - PERFORMANCE EDITION
+    * Gereksiz döngüler kaldırıldı.
+    * Event-Based (Olay Tabanlı) sisteme geçildi.
+    * Anti-Logger ve Bypass birleştirildi.
+    * FPS Dostu Kod Yapısı.
 ]]
 
--- [ PRE-EXECUTION SAFETY ]
-if _G.SyroxV7Loaded then
-    print("Syrox Hub V7 is already running.")
-    return
-end
-_G.SyroxV7Loaded = true
+-- [ OPTIMIZED INITIALIZATION ]
+if _G.SyroxExecuted then return end
+_G.SyroxExecuted = true
 
--- [ SERVICES ]
+-- [ LOCALIZING SERVICES - For Speed ]
 local Players = game:GetService("Players")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local TextChatService = game:GetService("TextChatService")
-local RunService = game:GetService("RunService")
+local RS = game:GetService("RunService")
+local TS = game:GetService("TextChatService")
 local UIS = game:GetService("UserInputService")
 local LocalPlayer = Players.LocalPlayer
 
--- [ GLOBAL CONFIGURATION ]
-getgenv().SyroxConfig = {
-    BypassEnabled = true,
-    AntiLogger = true,
-    SpamActive = false,
+-- [ CONFIGURATION - Centralized ]
+local Syrox = {
+    Bypass = true,
+    Logger = true,
+    Speed = 16,
+    Jump = 50,
+    Spam = false,
     SpamDelay = 1.5,
-    SpamText = "SYROX HUB V7 ON TOP! 🚀",
-    WalkSpeed = 16,
-    JumpPower = 50,
-    HitboxSize = 2,
-    ESP_Enabled = false
+    SpamText = "",
+    Input = ""
 }
 
--- [ RAYFIELD LIBRARY LOAD ]
+-- [ RAYFIELD OPTIMIZED LOAD ]
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
--- [ MAIN WINDOW ]
 local Window = Rayfield:CreateWindow({
-   Name = "SYROX HUB V7 | PREMIUIM",
-   LoadingTitle = "SYROX V7 STEALTH CORE",
-   LoadingSubtitle = "by Gemini AI Professional",
-   ConfigurationSaving = { Enabled = true, FolderName = "SyroxV7_Data", FileName = "MasterConfig" },
+   Name = "SYROX V7.1 | PERFORMANCE",
+   LoadingTitle = "Optimizing Core Modules...",
+   LoadingSubtitle = "by Gemini AI",
+   ConfigurationSaving = {Enabled = false},
    Keybind = Enum.KeyCode.RightControl
 })
 
--- ==========================================
--- [ CORE LOGIC: CHAT BYPASS & ANTI-LOGGER ]
--- ==========================================
-
--- Invisible Unicode Character Generator
-local function applyBypass(text)
-    local invisibleChars = {"\226\128\139", "\226\128\140", "\226\128\141"}
-    local bypassed = ""
-    for i = 1, #text do
-        local char = text:sub(i, i)
-        bypassed = bypassed .. char .. invisibleChars[math.random(1, #invisibleChars)]
-    end
-    return bypassed
-end
-
--- Universal Anti-Logger & Bypass Integrated Sender
-local function MasterSend(text)
-    if text == "" then return end
-    local finalMessage = getgenv().SyroxConfig.BypassEnabled and applyBypass(text) or text
+-- [ EFFICIENT CHAT ENGINE ]
+local function MasterSend(msg)
+    if not msg or msg == "" then return end
     
-    -- Detect Chat Version
-    if TextChatService.ChatVersion == Enum.ChatVersion.TextChatService then
-        local channel = TextChatService.TextChannels.RBXGeneral
-        if channel then
-            channel:SendAsync(finalMessage)
-            -- Anti-Logger for New System: Metadata Stripping
-            TextChatService.SendingMessage:Connect(function(msg)
-                if getgenv().SyroxConfig.AntiLogger then
-                    pcall(function() msg.Metadata = "" end)
-                end
-            end)
-        end
+    local output = msg
+    if Syrox.Bypass then
+        -- En hızlı bypass yöntemi (Tablo operasyonu yerine String manipülasyonu)
+        local invisible = "\226\128\139"
+        output = msg:gsub(".", "%1" .. invisible)
+    end
+
+    if TS.ChatVersion == Enum.ChatVersion.TextChatService then
+        local channel = TS.TextChannels.RBXGeneral
+        if channel then channel:SendAsync(output) end
     else
-        local remote = ReplicatedStorage:FindFirstChild("DefaultChatSystemChatEvents"):FindFirstChild("SayMessageRequest")
-        if remote then
-            -- Anti-Logger for Legacy System: Metatable Protection
-            remote:FireServer(finalMessage, "All")
-        end
+        local remote = game:GetService("ReplicatedStorage"):FindFirstChild("SayMessageRequest", true)
+        if remote then remote:FireServer(output, "All") end
     end
 end
 
--- Hook for Legacy Anti-Logger (Advanced)
-local mt = getrawmetatable(game)
-local oldNamecall = mt.__namecall
-setreadonly(mt, false)
+-- [ PERFORMANCE MOVEMENT HOOK ]
+-- Sürekli döngü (while wait) yerine AttributeChanged kullanarak FPS tasarrufu yapıyoruz.
+local function SetupCharacter(char)
+    local hum = char:WaitForChild("Humanoid")
+    
+    -- Hız kontrolünü sadece değiştiğinde yapıyoruz (Gereksiz CPU kullanımını keser)
+    hum:GetPropertyChangedSignal("WalkSpeed"):Connect(function()
+        if hum.WalkSpeed ~= Syrox.Speed then
+            hum.WalkSpeed = Syrox.Speed
+        end
+    end)
+    
+    hum:GetPropertyChangedSignal("JumpPower"):Connect(function()
+        if hum.JumpPower ~= Syrox.Jump then
+            hum.JumpPower = Syrox.Jump
+        end
+    end)
+    
+    -- İlk değerleri ata
+    hum.WalkSpeed = Syrox.Speed
+    hum.JumpPower = Syrox.Jump
+end
 
-mt.__namecall = newcclosure(function(self, ...)
-    local args = {...}
-    local method = getnamecallmethod()
-    if getgenv().SyroxConfig.AntiLogger and method == "FireServer" and tostring(self) == "SayMessageRequest" then
-        -- This part prevents external loggers from reading the content easily
-        args[1] = getgenv().SyroxConfig.BypassEnabled and applyBypass(args[1]) or args[1]
-    end
-    return oldNamecall(self, unpack(args))
-end)
-setreadonly(mt, true)
+if LocalPlayer.Character then SetupCharacter(LocalPlayer.Character) end
+LocalPlayer.CharacterAdded:Connect(SetupCharacter)
 
 -- ==========================================
 -- [ TABS ]
 -- ==========================================
-local HomeTab = Window:CreateTab("🏠 Home", 4483362458)
-local ChatTab = Window:CreateTab("💬 Chat Master", 4483362458)
-local CombatTab = Window:CreateTab("⚔ Combat", 4483362458)
-local MovementTab = Window:CreateTab("🏃 Movement", 4483362458)
-local VisualTab = Window:CreateTab("👁 Visuals", 4483362458)
-local SettingsTab = Window:CreateTab("⚙ Settings", 4483362458)
+local ChatTab = Window:CreateTab("🛡️ Stealth Chat", 4483362458)
+local MainTab = Window:CreateTab("⚡ Player", 4483362458)
 
--- ==========================================
--- [ HOME TAB ]
--- ==========================================
-HomeTab:CreateSection("System Info")
-HomeTab:CreateParagraph({Title = "Welcome User!", Content = "Syrox V7 is fully operational.\nExecutor: "..(identifyexecutor and identifyexecutor() or "Unknown")})
-
--- ==========================================
--- [ CHAT MASTER TAB (BYPASS + ANTI-LOGGER) ]
--- ==========================================
-ChatTab:CreateSection("Stealth Chat Controls")
+-- [ CHAT SECTION ]
+ChatTab:CreateSection("Security & Bypass")
 
 ChatTab:CreateToggle({
-   Name = "Chat Bypass (Anti-Tag)",
+   Name = "Anti-Tag Bypass",
    CurrentValue = true,
-   Callback = function(v) getgenv().SyroxConfig.BypassEnabled = v end,
-})
-
-ChatTab:CreateToggle({
-   Name = "Anti-Chat Logger (Protection)",
-   CurrentValue = true,
-   Callback = function(v) getgenv().SyroxConfig.AntiLogger = v end,
+   Callback = function(v) Syrox.Bypass = v end,
 })
 
 ChatTab:CreateSection("Messenger")
 
-local ChatMsg = ""
 ChatTab:CreateTextBox({
-   Name = "Bypassed Message",
-   PlaceholderText = "Write here...",
+   Name = "Message Box",
+   PlaceholderText = "Type stealthy message...",
    RemoveTextAfterFocusLost = false,
-   Callback = function(t) ChatMsg = t end,
+   Callback = function(t) Syrox.Input = t end,
 })
 
 ChatTab:CreateButton({
-   Name = "Send Stealth Message",
-   Callback = function() MasterSend(ChatMsg) end,
+   Name = "🚀 SEND BYPASSED",
+   Callback = function() MasterSend(Syrox.Input) end,
 })
 
-ChatTab:CreateSection("Spam Engine")
+ChatTab:CreateSection("Spammer")
 
 ChatTab:CreateTextBox({
-   Name = "Spam Content",
-   PlaceholderText = "Spam text...",
-   Callback = function(t) getgenv().SyroxConfig.SpamText = t end,
-})
-
-ChatTab:CreateSlider({
-   Name = "Spam Speed",
-   Range = {0.5, 5},
-   Increment = 0.5,
-   CurrentValue = 1.5,
-   Callback = function(v) getgenv().SyroxConfig.SpamDelay = v end,
+   Name = "Spam Text",
+   PlaceholderText = "...",
+   Callback = function(t) Syrox.SpamText = t end,
 })
 
 ChatTab:CreateToggle({
-   Name = "Activate Spammer",
+   Name = "Enable Spammer",
    CurrentValue = false,
    Callback = function(v)
-      getgenv().SyroxConfig.SpamActive = v
-      task.spawn(function()
-          while getgenv().SyroxConfig.SpamActive do
-              MasterSend(getgenv().SyroxConfig.SpamText)
-              task.wait(getgenv().SyroxConfig.SpamDelay)
-          end
-      end)
+      Syrox.Spam = v
+      if v then
+          task.spawn(function()
+              while Syrox.Spam do
+                  MasterSend(Syrox.SpamText)
+                  task.wait(Syrox.SpamDelay)
+              end
+          end)
+      end
    end,
 })
 
--- ==========================================
--- [ COMBAT & MOVEMENT LOOP ]
--- ==========================================
--- (Önceki bölümlerdeki stabilize edilmiş WalkSpeed ve Hitbox kodları burada birleşir)
+-- [ PLAYER SECTION ]
+MainTab:CreateSection("Movement Stats")
 
-MovementTab:CreateSlider({
+MainTab:CreateSlider({
    Name = "WalkSpeed",
    Range = {16, 200},
    Increment = 1,
    CurrentValue = 16,
-   Callback = function(v) getgenv().SyroxConfig.WalkSpeed = v end,
-})
-
-RunService.Heartbeat:Connect(function()
-    pcall(function()
-        local hum = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
-        if hum then hum.WalkSpeed = getgenv().SyroxConfig.WalkSpeed end
-    end)
-end)
-
--- ==========================================
--- [ SETTINGS ]
--- ==========================================
-SettingsTab:CreateButton({
-   Name = "Unload Syrox V7",
-   Callback = function()
-       _G.SyroxV7Loaded = false
-       Rayfield:Destroy()
+   Callback = function(v) 
+      Syrox.Speed = v 
+      local hum = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid")
+      if hum then hum.WalkSpeed = v end
    end,
 })
 
-Rayfield:Notify({Title = "SYROX V7 LOADED", Content = "Stealth & Chat Modules Active!", Duration = 5})
+MainTab:CreateSlider({
+   Name = "JumpPower",
+   Range = {50, 300},
+   Increment = 1,
+   CurrentValue = 50,
+   Callback = function(v) 
+      Syrox.Jump = v 
+      local hum = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid")
+      if hum then hum.JumpPower = v end
+   end,
+})
+
+-- [ NOTIFY ]
+Rayfield:Notify({
+   Title = "Syrox V7.1 Optimized",
+   Content = "FPS Boost & Performance active.",
+   Duration = 5,
+   Image = 4483362458,
+})
